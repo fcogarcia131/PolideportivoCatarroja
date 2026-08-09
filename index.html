@@ -1,5 +1,5 @@
-<!-- WEB ALIMENTADA CON CSV PUBLICADO RESPUESTAS DE FORMULARIO 1 OP MENORES NOMBRE CLIENTE EN LINEA 302
- URL DEL CSV DE LA PESTAÑA "DATOS" EN LINEA 364 -->
+<!-- WEB ALIMENTADA CON CSV PUBLICADO RESPUESTAS DE FORMULARIO 1 OP MENORES NOMBRE CLIENTE EN LINEA 309
+ URL DEL CSV DE LA PESTAÑA "DATOS" EN LINEA 409 -->
 
 <!doctype html>
 <html lang="es">
@@ -7,7 +7,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Operaciones menores legionella · POLIDEPORTIVO DE CATARROJA, AGUA SANITARIA</title>
+  <!-- <title>Operaciones menores legionella · POLIDEPORTIVO CATARROJA, AGUA SANITARIA</title> */  -->
   <style>
     :root {
       --bg: #f5f8fa;
@@ -43,10 +43,13 @@
       margin: 0 0 4px
     }
 
-    header p {
-      margin: 0 0 24px;
-      color: var(--muted)
-    }
+    /* TITULO INSTALACION */   
+   header p {
+  margin: 6px 0 24px;
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-weight: 500;
+}
 
     .stats {
       display: grid;
@@ -207,6 +210,7 @@
     }
 
 
+
     @media(max-width:620px) {
       main {
         padding: 18px 12px
@@ -266,6 +270,7 @@
         font-weight: 600;
       }
 
+
       @page {
         size: A4 portrait;
         margin: 10mm;
@@ -298,15 +303,17 @@
 <body>
   <main>
 
+
     <header>
       <h1>OPERACIONES MENORES PARA LA PREVENCION DE LA LEGIONELLA</h1>
-      <p>Instalación Polideportivo Catarroja,  agua sanitaria fría y caliente</p>
+      <p>POLIDEPORTIVO Catarroja, AFCSCH</p>
 
       <button onclick="window.print()" class="btn-print">
         📄 Exportar informe PDF
       </button>
 
     </header>
+
 
 
     <div class="stats">
@@ -395,12 +402,14 @@
     </section>
    
 
+
    
   </main>
   <script>
     const source='https://docs.google.com/spreadsheets/d/e/2PACX-1vSfCeRJ_Aqc_QhYgi1gRJvPZW82v-p2lAXYniK3X7LnDE1oRkpEsfkp4GNgRfo2YKA7JCcdxZaMen8I/pub?gid=745044596&single=true&output=csv'
     //datos//
   
+
 
 
     const names = {
@@ -594,6 +603,7 @@ $('chart').innerHTML = `<title>${m}: evolución temporal</title>${grid}<path d="
 
    
 
+
    
     fetch(source).then(r => {if (!r.ok) throw Error(r.status); return r.text()}).then(text => {
       let rows = csv(text), headers = rows.shift(); data = rows.flatMap(r => {
@@ -608,6 +618,7 @@ $('chart').innerHTML = `<title>${m}: evolución temporal</title>${grid}<path d="
           element: o['ELEMENTOS'],
           responsible: o['Responsable']
         }))
+
 
           .filter(x =>
             x.date &&
@@ -634,6 +645,7 @@ $('reportElement').innerHTML =
   elementosInforme
     .map(e => `<option>${e}</option>`)
     .join('');
+
 
 
 
@@ -674,4 +686,3 @@ $('reportResp').innerHTML =
 </body>
 
 </html>
-
