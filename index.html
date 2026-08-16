@@ -592,7 +592,9 @@ let labels = series.map((p, i) => {
 
 }).join('');
 
-$('chart').innerHTML = `<title>${m}: evolución temporal</title>${grid}<path d="${path}" fill="none" stroke="#087f8c" stroke-width="2.5"/>${dots}${labels}<text x="${L}" y="16" fill="#172a3a" font-size="13">${m}</text>`;
+    /* GRAFICO */
+     
+$('chart').innerHTML = `<title>${m}: evolución temporal</title>${grid}<path d="${path}" fill="none" stroke="#087f8c" stroke-width="1.2"/>${dots}${labels}<text x="${L}" y="16" fill="#172a3a" font-size="13">${m}</text>`;
 
      
       const fromText = from || 'Inicio';
