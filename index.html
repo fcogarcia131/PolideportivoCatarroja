@@ -564,7 +564,7 @@ let path = series
 let dots = series
     .map((p, i) =>
         `<circle data-i="${i}" cx="${x(i)}" cy="${y(p.value)}"
-        r="4"
+        r="2.8"
         fill="${p.out ? '#e98678' : '#087f8c'}"
         tabindex="0">
         <title>${dateLabel(p.date)}: ${fmt(p.value)}</title>
