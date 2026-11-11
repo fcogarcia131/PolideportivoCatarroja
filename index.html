@@ -24,6 +24,10 @@
       box-sizing: border-box
     }
 
+    [hidden] {
+      display: none !important
+    }
+
     body {
       margin: 0;
       background: var(--bg);
@@ -367,6 +371,23 @@
   </select>
 </label>
 
+<label>
+  Valor del parámetro
+  <select id="reportCond" aria-label="Filtrar por valor del parámetro">
+    <option value="Todos">Todos</option>
+  </select>
+</label>
+
+<label id="lblVal1" hidden>
+  <span id="txtVal1">Valor</span>
+  <input type="text" inputmode="decimal" id="reportVal1" placeholder="p. ej. 60" style="padding:9px 11px;font:inherit;border:1px solid var(--line);border-radius:8px;width:110px">
+</label>
+
+<label id="lblVal2" hidden>
+  y
+  <input type="text" inputmode="decimal" id="reportVal2" placeholder="p. ej. 70" style="padding:9px 11px;font:inherit;border:1px solid var(--line);border-radius:8px;width:110px">
+</label>
+
        <label>
   Desde
   <input type="date" id="fechaDesde">
@@ -394,6 +415,7 @@
           <tbody id="reportRows"></tbody>
         </table>
       </div>
+      <p class="context" id="reportCount" style="margin:10px 0 0"></p>
     </section>
    
 
@@ -449,7 +471,67 @@
     function options() {let metrics = [...new Set(data.map(x => x.metric))], zones = [...new Set(data.map(x => x.zone))], metricOptions = metrics.map(x => `<option>${x}</option>`).join(''); $('metric').innerHTML = metricOptions; $('reportMetric').innerHTML = metricOptions; $('zone').innerHTML = '<option>Todas las zonas</option>' + zones.map(x => `<option>${x}</option>`).join(''); $('metric').value = metrics.includes('Temperatura acumulador') ? 'Temperatura acumulador' : metrics[0]; $('reportMetric').value = $('metric').value}
     function outOfRange(p) {let l = limits[p.metric]; return !!l && ((l.min !== undefined && p.value < l.min) || (l.max !== undefined && p.value > l.max))}
 
+    // ---- Filtro por valor del parámetro ----
+    const condNumericas = [
+      ['lt', 'Menor que (<)'], ['le', 'Menor o igual que (≤)'],
+      ['gt', 'Mayor que (>)'], ['ge', 'Mayor o igual que (≥)'],
+      ['eq', 'Igual a (=)'], ['between', 'Entre (ambos incluidos)'],
+      ['out', 'Fuera de rango (límites legales)'], ['in', 'Dentro de rango (límites legales)'],
+      ['nonum', 'Sin valor numérico (Apagado, etc.)']
+    ];
+    let condMetric = null;
+    function condOptions(m) {
+      if (condMetric === m) return;
+      condMetric = m;
+      const prev = $('reportCond').value;
+      const esTexto = metricasTexto.includes(m);
+      const textos = [...new Set(data.filter(x => key(x.metric) === key(m) && !Number.isFinite(x.value))
+        .map(x => String(x.raw).trim()).filter(Boolean))].sort();
+      let html = '<option value="Todos">Todos</option>';
+      if (!esTexto) html += condNumericas.filter(([k]) => k !== 'out' && k !== 'in' || limits[m]).map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+      if (textos.length) html += '<optgroup label="Texto registrado">' + textos.map(t => `<option value="txt:${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('') + '</optgroup>';
+      $('reportCond').innerHTML = html;
+      $('reportCond').value = [...$('reportCond').options].some(o => o.value === prev) ? prev : 'Todos';
+      condInputs();
+    }
+    function condInputs() {
+      const c = $('reportCond').value;
+      const necesita = ['lt', 'le', 'gt', 'ge', 'eq', 'between'].includes(c);
+      $('lblVal1').hidden = !necesita;
+      $('lblVal2').hidden = c !== 'between';
+      $('txtVal1').textContent = c === 'between' ? 'Entre' : 'Valor';
+    }
+    function valueOk(p) {
+      const c = $('reportCond').value;
+      if (c === 'Todos') return true;
+      if (c.startsWith('txt:')) return !Number.isFinite(p.value) && key(p.raw) === key(c.slice(4).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"'));
+      if (c === 'nonum') return !Number.isFinite(p.value) && String(p.raw).trim() !== '';
+      if (!Number.isFinite(p.value)) return false;
+      if (c === 'out') return outOfRange(p);
+      if (c === 'in') return !outOfRange(p);
+      const a = number($('reportVal1').value), b = number($('reportVal2').value);
+      if (a === null) return true; // sin valor escrito: no filtra
+      switch (c) {
+        case 'lt': return p.value < a;
+        case 'le': return p.value <= a;
+        case 'gt': return p.value > a;
+        case 'ge': return p.value >= a;
+        case 'eq': return Math.abs(p.value - a) < 1e-9;
+        case 'between': return b === null ? p.value >= a : p.value >= Math.min(a, b) && p.value <= Math.max(a, b);
+      }
+      return true;
+    }
+    function condText() {
+      const c = $('reportCond').value;
+      if (c === 'Todos') return 'Todos';
+      if (c.startsWith('txt:')) return $('reportCond').selectedOptions[0].textContent;
+      const t = (condNumericas.find(([k]) => k === c) || [, c])[1];
+      if (['out', 'in', 'nonum'].includes(c)) return t;
+      return c === 'between' ? `${t} ${$('reportVal1').value || '…'} y ${$('reportVal2').value || '…'}` : `${t} ${$('reportVal1').value || '…'}`;
+    }
+
     function report(points) {
+      $('reportCount').textContent = `${points.length} lectura(s) en el informe` + ($('reportCond').value !== 'Todos' ? ` · Valor: ${condText()}` : '');
 
       const esTexto = metricasTexto.includes($('metric').value);
 
@@ -474,6 +556,7 @@
        z = $('zone').value; 
      const esTexto = metricasTexto.includes(m);
      $('reportMetric').value = m; 
+     condOptions(m);
      const from = $('fromDate')?.value || '';
       const to = $('toDate')?.value || '';
 
@@ -515,6 +598,8 @@ const hastaInforme =
     hastaInforme &&
     x.date > hastaInforme
   ) return false;
+
+  if (!valueOk(x)) return false;
 
   return true;
      }).sort((a, b) => a.date.localeCompare(b.date));
@@ -617,7 +702,7 @@ $('chart').innerHTML = `<title>${m}: evolución temporal</title>${grid}<path d="
      
       const fromText = from || 'Inicio';
       const toText = to || 'Actualidad';
-      $('printFilters').innerHTML = `Parámetro: ${m} | Zona: ${z} | Desde: ${fromText} | Hasta: ${toText}`;
+      $('printFilters').innerHTML = `Parámetro: ${m} | Zona: ${z} | Desde: ${fromText} | Hasta: ${toText} | Valor: ${escapeHtml(condText())}`;
       report(pts); $('chart').querySelectorAll('circle').forEach(el => {let show = () => {let p = series[+el.dataset.i], tip = $('tip'); tip.hidden = false; tip.textContent = `${dateFull(p.date)} | ${p.element} | ${fmt(p.value)}${p.out ? ' | FUERA DE RANGO' : ''}`; tip.style.left = `${(+el.getAttribute('cx') / 700) * 100}%`; tip.style.top = `${(+el.getAttribute('cy') / 330) * 100}%`}; el.onmouseenter = show; el.onfocus = show; el.onmouseleave = () => $('tip').hidden = true; el.onblur = () => $('tip').hidden = true})
     }
 
@@ -693,6 +778,9 @@ $('reportResp').innerHTML =
 
      $('reportElement').onchange = render;
      $('reportResp').onchange = render;
+     $('reportCond').onchange = () => {condInputs(); render()};
+     $('reportVal1').oninput = render;
+     $('reportVal2').oninput = render;
      $('fechaDesde').onchange = render;
      $('fechaHasta').onchange = render;
      
