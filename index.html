@@ -599,8 +599,6 @@ const hastaInforme =
     x.date > hastaInforme
   ) return false;
 
-  if (!valueOk(x)) return false;
-
   return true;
      }).sort((a, b) => a.date.localeCompare(b.date));
 
@@ -625,7 +623,7 @@ const hastaInforme =
     }
        
 
-        report(pts);
+        report(pts.filter(valueOk));
 
         return;
       }
@@ -644,7 +642,7 @@ const hastaInforme =
       $('total').textContent = pts.length; $('period').textContent = '—';
       $('latest').textContent = pts.length ? escapeHtml(pts.at(-1).raw) : '—'; $('latest').classList.remove('alert');
       $('detail').textContent = pts.length ? `${dateFull(pts.at(-1).date)} · ${pts.at(-1).element} · ${pts.at(-1).responsible}` : '—';
-      report(pts);
+      report(pts.filter(valueOk));
    return } $('status').hidden = true; $('chart').hidden = false; 
      let series = numericos.map(p => ({date: p.date, value: p.value, out: outOfRange(p), element: p.element, responsible: p.responsible}));
      let vals = series.map(x => x.value), min = Math.min(...vals), max = Math.max(...vals), pad = (max - min || 1) * .14, lo = min - pad, hi = max + pad; 
@@ -703,7 +701,7 @@ $('chart').innerHTML = `<title>${m}: evolución temporal</title>${grid}<path d="
       const fromText = from || 'Inicio';
       const toText = to || 'Actualidad';
       $('printFilters').innerHTML = `Parámetro: ${m} | Zona: ${z} | Desde: ${fromText} | Hasta: ${toText} | Valor: ${escapeHtml(condText())}`;
-      report(pts); $('chart').querySelectorAll('circle').forEach(el => {let show = () => {let p = series[+el.dataset.i], tip = $('tip'); tip.hidden = false; tip.textContent = `${dateFull(p.date)} | ${p.element} | ${fmt(p.value)}${p.out ? ' | FUERA DE RANGO' : ''}`; tip.style.left = `${(+el.getAttribute('cx') / 700) * 100}%`; tip.style.top = `${(+el.getAttribute('cy') / 330) * 100}%`}; el.onmouseenter = show; el.onfocus = show; el.onmouseleave = () => $('tip').hidden = true; el.onblur = () => $('tip').hidden = true})
+      report(pts.filter(valueOk)); $('chart').querySelectorAll('circle').forEach(el => {let show = () => {let p = series[+el.dataset.i], tip = $('tip'); tip.hidden = false; tip.textContent = `${dateFull(p.date)} | ${p.element} | ${fmt(p.value)}${p.out ? ' | FUERA DE RANGO' : ''}`; tip.style.left = `${(+el.getAttribute('cx') / 700) * 100}%`; tip.style.top = `${(+el.getAttribute('cy') / 330) * 100}%`}; el.onmouseenter = show; el.onfocus = show; el.onmouseleave = () => $('tip').hidden = true; el.onblur = () => $('tip').hidden = true})
     }
 
    
