@@ -34,8 +34,8 @@
     main {
       max-width: 1180px;
       margin: 0 auto;
-      padding: 28px 32px 40px
-     box-sizing: border-box;
+      padding: 28px 32px 40px;
+      box-sizing: border-box;
     }
 
     h1 {
@@ -327,11 +327,6 @@
         <div class="value" id="latest">—</div>
         <div class="context" id="detail">—</div>
       </div>
-
-   
-
-        
-      </div>
     </div>
     <div class="controls">
       <label>Parámetro<select id="metric"></select></label>
@@ -364,7 +359,7 @@
   </select>
 </label>
 
-</label>
+<label>
   Responsable
   <select id="reportResp"
           aria-label="Responsable del registro">
@@ -440,7 +435,17 @@
     let data = [];
     function csv(text) {let rows = [], row = [], cell = '', q = false; for (let i = 0; i < text.length; i++) {let c = text[i], n = text[i + 1]; if (c === '"' && q && n === '"') {cell += '"'; i++} else if (c === '"') q = !q; else if (c === ',' && !q) {row.push(cell); cell = ''} else if ((c === '\n' || c === '\r') && !q) {if (c === '\r' && n === '\n') i++; row.push(cell); if (row.some(x => x)) rows.push(row); row = []; cell = ''} else cell += c} if (cell || row.length) {row.push(cell); rows.push(row)} return rows}
     function iso(s) {let p = String(s || '').trim().split('/'); return p.length === 3 ? `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}` : ''}
-    function number(s) {let v = String(s || '').trim().replace('.', '').replace(',', '.'); return v === '' ? null : Number(v)} function dateLabel(s) {return new Date(s + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month: 'short'})} function dateFull(s) {return new Date(s + 'T00:00:00').toLocaleDateString('es-ES')} function escapeHtml(s) {return String(s || '—').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]))}
+    function number(s) {
+      // Acepta "55,3", "55.3", "1.234,5" y "72". Devuelve null si no es un número (p. ej. "Apagado" o una fecha).
+      let v = String(s || '').trim();
+      if (v === '' || !/^-?[\d.,]+$/.test(v)) return null;
+      if (v.includes(',') && v.includes('.')) v = v.replace(/\./g, '').replace(',', '.');
+      else v = v.replace(',', '.');
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null
+    }
+    // Valor que se muestra en el informe: el número formateado o, si no es numérico, el texto tal cual ("Apagado")
+    function shown(p) {return Number.isFinite(p.value) ? fmt(p.value) : escapeHtml(p.raw)} function dateLabel(s) {return new Date(s + 'T00:00:00').toLocaleDateString('es-ES', {day: '2-digit', month: 'short'})} function dateFull(s) {return new Date(s + 'T00:00:00').toLocaleDateString('es-ES')} function escapeHtml(s) {return String(s || '—').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]))}
     function options() {let metrics = [...new Set(data.map(x => x.metric))], zones = [...new Set(data.map(x => x.zone))], metricOptions = metrics.map(x => `<option>${x}</option>`).join(''); $('metric').innerHTML = metricOptions; $('reportMetric').innerHTML = metricOptions; $('zone').innerHTML = '<option>Todas las zonas</option>' + zones.map(x => `<option>${x}</option>`).join(''); $('metric').value = metrics.includes('Temperatura acumulador') ? 'Temperatura acumulador' : metrics[0]; $('reportMetric').value = $('metric').value}
     function outOfRange(p) {let l = limits[p.metric]; return !!l && ((l.min !== undefined && p.value < l.min) || (l.max !== undefined && p.value > l.max))}
 
@@ -456,7 +461,7 @@
 <tr>
 <td>${dateFull(p.date)}</td>
 <td>${escapeHtml(p.element)}</td>
-<td>${esTexto ? escapeHtml(p.raw) : fmt(p.value)}</td>
+<td>${esTexto ? escapeHtml(p.raw) : shown(p)}</td>
 <td>${escapeHtml(p.responsible)}</td>
 </tr>
 
@@ -518,6 +523,7 @@ const hastaInforme =
 
         $('chart').hidden = true;
         $('status').hidden = true;
+        $('note').textContent = '';
 
         $('total').textContent = pts.length;
         $('period').textContent = 'Operaciones registradas';
@@ -539,11 +545,23 @@ const hastaInforme =
         return;
       }
 
-      if (!pts.length) {$('status').hidden = false; 
-      $('status').textContent = 'No hay lecturas para esta combinación.';
-      $('chart').hidden = true; $('reportRows').innerHTML = '';
+      // Lecturas no numéricas (p. ej. "Apagado"): salen en el informe pero no en la gráfica
+      const sinValor = pts.filter(p => !Number.isFinite(p.value));
+      const numericos = pts.filter(p => Number.isFinite(p.value));
+      const textos = [...new Set(sinValor.map(p => String(p.raw).trim()).filter(Boolean))];
+      $('note').textContent = sinValor.length
+        ? `${sinValor.length} lectura(s) sin valor numérico (${textos.join(', ')}) no se representan en la gráfica; aparecen en el informe.`
+        : '';
+
+      if (!numericos.length) {$('status').hidden = false; 
+      $('status').textContent = sinValor.length ? 'No hay lecturas numéricas para esta combinación (solo: ' + textos.join(', ') + ').' : 'No hay lecturas para esta combinación.';
+      $('chart').hidden = true;
+      $('total').textContent = pts.length; $('period').textContent = '—';
+      $('latest').textContent = pts.length ? escapeHtml(pts.at(-1).raw) : '—'; $('latest').classList.remove('alert');
+      $('detail').textContent = pts.length ? `${dateFull(pts.at(-1).date)} · ${pts.at(-1).element} · ${pts.at(-1).responsible}` : '—';
+      report(pts);
    return } $('status').hidden = true; $('chart').hidden = false; 
-     let series = pts.map(p => ({date: p.date, value: p.value, out: outOfRange(p), element: p.element, responsible: p.responsible}));
+     let series = numericos.map(p => ({date: p.date, value: p.value, out: outOfRange(p), element: p.element, responsible: p.responsible}));
      let vals = series.map(x => x.value), min = Math.min(...vals), max = Math.max(...vals), pad = (max - min || 1) * .14, lo = min - pad, hi = max + pad; 
      let W = 700, H = 330, L = 64, R = 26, T = 25, B = 58, iw = W - L - R, ih = H - T - B, x = i => L + (series.length === 1 ? iw / 2 : i * iw / (series.length - 1)), y = v => T + (hi - v) * ih / (hi - lo); 
      $('total').textContent = pts.length; $('period').textContent = `${dateLabel(series[0].date)}–${dateLabel(series.at(-1).date)}`; 
