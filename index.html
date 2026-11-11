@@ -24,8 +24,9 @@
       box-sizing: border-box
     }
 
-    [hidden] {
-      display: none !important
+    /* Solo para las casillas del filtro por valor (no afecta a la gráfica) */
+    label[hidden] {
+      display: none
     }
 
     body {
@@ -604,7 +605,7 @@ const hastaInforme =
 
       if (esTexto) {
 
-        $('chart').hidden = true;
+        $('chart').style.display = 'none';
         $('status').hidden = true;
         $('note').textContent = '';
 
@@ -638,12 +639,12 @@ const hastaInforme =
 
       if (!numericos.length) {$('status').hidden = false; 
       $('status').textContent = sinValor.length ? 'No hay lecturas numéricas para esta combinación (solo: ' + textos.join(', ') + ').' : 'No hay lecturas para esta combinación.';
-      $('chart').hidden = true;
+      $('chart').style.display = 'none';
       $('total').textContent = pts.length; $('period').textContent = '—';
       $('latest').textContent = pts.length ? escapeHtml(pts.at(-1).raw) : '—'; $('latest').classList.remove('alert');
       $('detail').textContent = pts.length ? `${dateFull(pts.at(-1).date)} · ${pts.at(-1).element} · ${pts.at(-1).responsible}` : '—';
       report(pts.filter(valueOk));
-   return } $('status').hidden = true; $('chart').hidden = false; 
+   return } $('status').hidden = true; $('chart').style.display = ''; 
      let series = numericos.map(p => ({date: p.date, value: p.value, out: outOfRange(p), element: p.element, responsible: p.responsible}));
      let vals = series.map(x => x.value), min = Math.min(...vals), max = Math.max(...vals), pad = (max - min || 1) * .14, lo = min - pad, hi = max + pad; 
      let W = 700, H = 330, L = 64, R = 26, T = 25, B = 58, iw = W - L - R, ih = H - T - B, x = i => L + (series.length === 1 ? iw / 2 : i * iw / (series.length - 1)), y = v => T + (hi - v) * ih / (hi - lo); 
